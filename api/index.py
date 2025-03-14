@@ -1,21 +1,11 @@
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
-
-@app.route('/', methods=['GET'])
-def home():
-    return jsonify({"status": "Bot is running"})
-
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    try:
-        return jsonify({"ok": True, "message": "Webhook endpoint is working"})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-# Vercel需要的handler
-def handler(event, context):
-    return app(event, context)
+def handler(request, response):
+    status = '200 OK'
+    response_headers = [('Content-type', 'application/json')]
+    response(status, response_headers)
+    return [b'{"status": "Bot is running"}']
 
 if __name__ == '__main__':
-    app.run()
+    from wsgiref.simple_server import make_server
+    httpd = make_server('', 8000, handler)
+    print("Serving on port 8000...")
+    httpd.serve_forever()

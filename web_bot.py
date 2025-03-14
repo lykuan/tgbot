@@ -7,6 +7,7 @@ from constants import *
 from create_messages import *
 from amazon_api import AmazonAPI
 import httpx
+import os
 
 app = FastAPI(title="Amazon Telegram Bot")
 
@@ -19,8 +20,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 将CHANNEL_ID转换为整数
-CHANNEL_ID_INT = int(CHANNEL_ID)
+# 环境变量配置
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN', TELEGRAM_TOKEN)
+CHANNEL_ID = int(os.getenv('CHANNEL_ID', CHANNEL_ID))
 
 async def send_telegram_request(method: str, params: dict) -> dict:
     """异步发送Telegram API请求"""
@@ -78,11 +80,11 @@ async def handle_amazon_link(message_text: str):
             image_url = product.images.primary.large.url.replace('_SL500_', '_SL1500_')
             print(f"尝试发送图片: {image_url}")
 
-            if await send_telegram_photo(CHANNEL_ID_INT, image_url, formatted_message):
+            if await send_telegram_photo(CHANNEL_ID, image_url, formatted_message):
                 return
 
         print("发送纯文本消息")
-        await send_telegram_message(CHANNEL_ID_INT, formatted_message)
+        await send_telegram_message(CHANNEL_ID, formatted_message)
 
     except Exception as e:
         print(f"处理Amazon链接时出错: {e}")
@@ -119,13 +121,21 @@ async def telegram_webhook(request: Request):
 @app.get("/")
 async def root():
     """健康检查端点"""
-    return {"status": "Bot is running"}
+    return {
+        "status": "Bot is running",
+        "telegram_token": TELEGRAM_TOKEN[:10] + "...",
+        "channel_id": CHANNEL_ID
+    }
 
 # 为Vercel部署添加必要的变量
 app.state.telegram_token = TELEGRAM_TOKEN
-app.state.channel_id = CHANNEL_ID_INT
+app.state.channel_id = CHANNEL_ID
 
-# 仅在直接运行时启动服务器
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# 导出 app 变量给 Vercel
+app = CORSMiddleware(
+    app=app,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

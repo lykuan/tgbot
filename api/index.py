@@ -1,14 +1,21 @@
-from http.server import BaseHTTPRequestHandler
+from flask import Flask, request, jsonify
 
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-        self.wfile.write(str.encode('{"status": "Bot is running"}'))
+app = Flask(__name__)
 
-    def do_POST(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-        self.wfile.write(str.encode('{"ok": true, "message": "Webhook endpoint is working"}'))
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({"status": "Bot is running"})
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    try:
+        return jsonify({"ok": True, "message": "Webhook endpoint is working"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+# Vercel需要的handler
+def handler(event, context):
+    return app(event, context)
+
+if __name__ == '__main__':
+    app.run()
